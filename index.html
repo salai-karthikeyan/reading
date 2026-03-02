@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading Tracker — Content Macha</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0d0d0d; --surface: #161616; --surface2: #1e1e1e;
+  --border: #2a2a2a; --accent: #ff6b35; --accent2: #ff9a5c;
+  --text: #f0f0f0; --muted: #888; --green: #4caf7d;
+}
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+header { padding: 18px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); }
+.logo { font-size: 18px; font-weight: 700; color: var(--accent); }
+.logo span { color: var(--text); }
+main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+#auth-wall { text-align: center; padding: 80px 20px; }
+#auth-wall h2 { font-size: 28px; margin-bottom: 12px; }
+#auth-wall p { color: var(--muted); margin-bottom: 32px; font-size: 15px; line-height: 1.6; }
+.btn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+.btn:hover { background: var(--accent2); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+.btn-green { background: var(--green); }
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.top-bar h1 { font-size: 22px; font-weight: 700; }
+.top-bar h1 span { color: var(--accent); }
+#books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.book-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+.book-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.book-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); transform-origin: left; }
+.book-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.book-author { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.progress-bar { background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.4s; }
+.progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.notes-count { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.notes-count span { color: var(--accent2); font-weight: 600; }
+.add-book-card { background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 20px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; color: var(--muted); font-size: 14px; gap: 10px; }
+.add-book-card:hover { border-color: var(--accent); color: var(--accent); }
+.add-book-card .plus { font-size: 32px; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto; }
+.modal h2 { font-size: 18px; margin-bottom: 20px; }
+.modal h2 span { color: var(--accent); }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+input, textarea, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 14px; font-family: inherit; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 100px; }
+select option { background: var(--surface2); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+#book-detail { display: none; }
+.back-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; margin-bottom: 24px; padding: 0; }
+.back-btn:hover { color: var(--accent); }
+.detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+.detail-title { font-size: 24px; font-weight: 700; }
+.detail-author { font-size: 15px; color: var(--muted); margin-top: 4px; }
+.detail-actions { display: flex; gap: 10px; }
+.progress-big { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+.pct { font-size: 36px; font-weight: 800; color: var(--accent); }
+.pages-info { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.prog-bar-wrap { margin-top: 12px; }
+.section-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.badge { background: var(--accent); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 99px; }
+.notes-list { display: flex; flex-direction: column; gap: 12px; }
+.note-item { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 16px; }
+.note-cat { display: inline-block; background: var(--surface2); border: 1px solid var(--border); color: var(--accent2); font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 99px; margin-bottom: 8px; text-transform: uppercase; }
+.note-text { font-size: 14px; line-height: 1.6; }
+.note-time { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.note-synced { font-size: 11px; color: var(--green); margin-top: 4px; }
+.note-err { font-size: 11px; color: #e57373; margin-top: 4px; }
+.empty-notes { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+#toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 14px; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 200; max-width: 320px; }
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.success { border-color: var(--green); color: var(--green); }
+#toast.error { border-color: #e57373; color: #e57373; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.hidden { display: none !important; }
+.doc-link-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.doc-link-bar a { color: var(--accent); font-size: 13px; text-decoration: none; }
+.doc-link-bar span { font-size: 13px; color: var(--muted); }
+.user-bar { display: flex; align-items: center; gap: 10px; }
+.user-bar img { width: 28px; height: 28px; border-radius: 50%; }
+.user-bar span { font-size: 13px; color: var(--muted); }
+.btn-signout { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-signout:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">content <span>macha</span> &middot; reader</div>
+  <div id="header-right" style="display:flex;align-items:center;gap:12px;">
+    <div id="google-signin-btn"></div>
+    <div id="user-bar-wrap" class="user-bar hidden">
+      <img id="user-avatar" src="" alt="">
+      <span id="user-name"></span>
+      <button class="btn-signout" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="auth-wall">
+    <h2>Your Reading Tracker</h2>
+    <p>Track all your books simultaneously.<br>Log highlights and sync them directly to your Google Doc.</p>
+    <div id="signin-prompt" style="display:flex;justify-content:center;margin-bottom:16px;"></div>
+    <p style="font-size:13px;color:var(--muted);">Sign in with <strong>thecontentmacha@gmail.com</strong> to sync to your Doc.</p>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <div class="top-bar">
+      <h1>My <span>Books</span></h1>
+      <button class="btn" onclick="openAddBook()">+ Add Book</button>
+    </div>
+    <div id="doc-link-container"></div>
+    <div id="books-grid"></div>
+  </div>
+
+  <div id="book-detail">
+    <button class="back-btn" onclick="showDashboard()">&#8592; Back to all books</button>
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" id="detail-title"></div>
+        <div class="detail-author" id="detail-author"></div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn btn-outline btn-sm" onclick="openUpdatePages()">Update Pages</button>
+        <button class="btn btn-sm" onclick="openAddNote()">+ Add Highlight</button>
+      </div>
+    </div>
+    <div class="progress-big">
+      <div class="pct" id="detail-pct">0%</div>
+      <div class="pages-info" id="detail-pages-info"></div>
+      <div class="prog-bar-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="detail-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="section-title">Highlights &amp; Notes <span class="badge" id="notes-badge">0</span></div>
+    <div id="notes-list" class="notes-list"></div>
+  </div>
+</main>
+
+<!-- Add Book -->
+<div id="modal-add-book" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2>Add a <span>New Book</span></h2>
+    <div class="form-group"><label>Book Title *</label><input id="input-title" type="text" placeholder="e.g. Influence"></div>
+    <div class="form-group"><label>Author *</label><input id="input-author" type="text" placeholder="e.g. Robert Cialdini"></div>
+    <div class="form-group"><label>Total Pages *</label><input id="input-pages" type="number" placeholder="e.g. 320" min="1"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-add-book')">Cancel</button>
+      <button class="btn" onclick="addBook()">Add Book</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update Pages -->
+<div id="modal-update-pages" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2>Update <span>Progress</span></h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">How many pages have you read in total so far?</p>
+    <div class="form-group"><label>Pages Read</label><input id="input-pages-read" type="number" placeholder="e.g. 120" min="0"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-update-pages')">Cancel</button>
+      <button class="btn" onclick="updatePages()">Save Progress</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Note -->
+<div id="modal-add-note" class="modal-backdrop hidden">
+  <div class="modal">
+    <h2>Add a <span>Highlight</span></h2>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="input-cat-select" onchange="handleCatSelect(this)">
+        <option value="Key Insight">&#128161; Key Insight</option>
+        <option value="Quote">&#128172; Quote</option>
+        <option value="Action Item">&#9989; Action Item</option>
+        <option value="Idea">&#127807; Idea</option>
+        <option value="Question">&#10067; Question</option>
+        <option value="custom">&#9999; Custom (type below)</option>
+      </select>
+    </div>
+    <div class="form-group hidden" id="custom-cat-group">
+      <label>Custom Category</label>
+      <input id="input-cat-custom" type="text" placeholder="e.g. Framework, Statistic, Story...">
+    </div>
+    <div class="form-group">
+      <label>Your Highlight / Note *</label>
+      <textarea id="input-note" placeholder="Paste or type your highlight here..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('modal-add-note')">Cancel</button>
+      <button class="btn btn-green" id="save-note-btn" onclick="saveNote()">Save &amp; Sync to Doc</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'cm_reader_v1';
+let state = { books: [], docId: null, docUrl: null };
+let currentBookId = null;
+let gToken = null;
+
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function loadState() { try { const r = localStorage.getItem(STORAGE_KEY); if (r) state = JSON.parse(r); } catch(e){} }
+
+window.onload = function() {
+  loadState();
+  const CLIENT_ID = '634977710404-ov6a6b2cjkv0h7gm39fjq7hs7g0f1mnj.apps.googleusercontent.com';
+  window._tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file openid email profile',
+    callback: handleToken
+  });
+  google.accounts.id.initialize({ client_id: CLIENT_ID, callback: function() { window._tokenClient.requestAccessToken({ prompt: '' }); } });
+  google.accounts.id.renderButton(document.getElementById('google-signin-btn'), { theme: 'filled_black', size: 'medium', shape: 'pill' });
+  google.accounts.id.renderButton(document.getElementById('signin-prompt'), { theme: 'filled_black', size: 'large', shape: 'pill' });
+};
+
+function handleToken(resp) {
+  if (resp.error) { showToast('Auth error: ' + resp.error, 'error'); return; }
+  gToken = resp.access_token;
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + gToken } })
+    .then(function(r) { return r.json(); }).then(function(info) {
+      document.getElementById('user-avatar').src = info.picture || '';
+      document.getElementById('user-name').textContent = info.name || info.email;
+      document.getElementById('user-bar-wrap').classList.remove('hidden');
+      document.getElementById('google-signin-btn').classList.add('hidden');
+      document.getElementById('auth-wall').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      renderDashboard();
+      ensureDoc();
+    });
+}
+
+function signOut() {
+  gToken = null;
+  google.accounts.id.disableAutoSelect();
+  document.getElementById('user-bar-wrap').classList.add('hidden');
+  document.getElementById('google-signin-btn').classList.remove('hidden');
+  document.getElementById('auth-wall').classList.remove('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('book-detail').style.display = 'none';
+}
+
+async function ensureDoc() {
+  if (state.docId) { renderDocLink(); return; }
+  try {
+    const res = await fetch('https://docs.googleapis.com/v1/documents', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Content Macha — Reading Highlights' })
+    });
+    if (!res.ok) throw new Error();
+    const doc = await res.json();
+    state.docId = doc.documentId;
+    state.docUrl = 'https://docs.google.com/document/d/' + doc.documentId + '/edit';
+    await batchUpdate([
+      { insertText: { location: { index: 1 }, text: 'Content Macha — Reading Highlights\n\n' } },
+      { updateParagraphStyle: { range: { startIndex: 1, endIndex: 36 }, paragraphStyle: { namedStyleType: 'HEADING_1' }, fields: 'namedStyleType' } }
+    ]);
+    saveState(); renderDocLink();
+    showToast('Google Doc created and linked!', 'success');
+  } catch(e) { showToast('Could not create Google Doc', 'error'); }
+}
+
+async function batchUpdate(requests) {
+  return fetch('https://docs.googleapis.com/v1/documents/' + state.docId + ':batchUpdate', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + gToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests })
+  });
+}
+
+async function getDocEndIndex() {
+  const res = await fetch('https://docs.googleapis.com/v1/documents/' + state.docId, { headers: { 'Authorization': 'Bearer ' + gToken } });
+  const doc = await res.json();
+  const c = doc.body.content;
+  return c[c.length - 1].endIndex - 1;
+}
+
+async function syncNoteToDoc(book, note) {
+  try {
+    const end = await getDocEndIndex();
+    const line = '[' + book.title + ']  |  ' + note.category.toUpperCase() + '\n' + note.text + '\n— ' + note.date + '\n\n';
+    await batchUpdate([{ insertText: { location: { index: end }, text: line } }]);
+    return true;
+  } catch(e) { return false; }
+}
+
+function renderDocLink() {
+  if (!state.docUrl) return;
+  document.getElementById('doc-link-container').innerHTML =
+    '<div class="doc-link-bar"><span>All highlights sync to your Google Doc</span><a href="' + state.docUrl + '" target="_blank">Open Doc &rarr;</a></div>';
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function openAddBook() {
+  ['input-title','input-author'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.getElementById('input-pages').value = '';
+  document.getElementById('modal-add-book').classList.remove('hidden');
+}
+
+function addBook() {
+  const title = document.getElementById('input-title').value.trim();
+  const author = document.getElementById('input-author').value.trim();
+  const pages = parseInt(document.getElementById('input-pages').value);
+  if (!title || !author || !pages || pages < 1) { showToast('Please fill all fields', 'error'); return; }
+  state.books.push({ id: genId(), title: title, author: author, totalPages: pages, pagesRead: 0, notes: [] });
+  saveState(); closeModal('modal-add-book'); renderDashboard();
+  showToast('Book added!', 'success');
+}
+
+function openUpdatePages() {
+  document.getElementById('input-pages-read').value = getBook(currentBookId).pagesRead || '';
+  document.getElementById('modal-update-pages').classList.remove('hidden');
+}
+
+function updatePages() {
+  const val = parseInt(document.getElementById('input-pages-read').value);
+  const book = getBook(currentBookId);
+  if (isNaN(val) || val < 0 || val > book.totalPages) { showToast('Enter 0 to ' + book.totalPages, 'error'); return; }
+  book.pagesRead = val; saveState(); closeModal('modal-update-pages'); renderDetail(currentBookId);
+  showToast('Progress saved!', 'success');
+}
+
+function handleCatSelect(sel) {
+  document.getElementById('custom-cat-group').classList.toggle('hidden', sel.value !== 'custom');
+}
+
+function openAddNote() {
+  document.getElementById('input-note').value = '';
+  document.getElementById('input-cat-select').value = 'Key Insight';
+  document.getElementById('custom-cat-group').classList.add('hidden');
+  document.getElementById('input-cat-custom').value = '';
+  document.getElementById('modal-add-note').classList.remove('hidden');
+}
+
+async function saveNote() {
+  const text = document.getElementById('input-note').value.trim();
+  const catSel = document.getElementById('input-cat-select').value;
+  const category = catSel === 'custom' ? (document.getElementById('input-cat-custom').value.trim() || 'Note') : catSel;
+  if (!text) { showToast('Please enter a highlight', 'error'); return; }
+  const book = getBook(currentBookId);
+  const btn = document.getElementById('save-note-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Syncing...';
+  const note = {
+    id: genId(), text: text, category: category, synced: false,
+    date: new Date().toLocaleString('en-IN', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  };
+  note.synced = await syncNoteToDoc(book, note);
+  book.notes.unshift(note);
+  saveState();
+  btn.disabled = false; btn.innerHTML = 'Save &amp; Sync to Doc';
+  closeModal('modal-add-note'); renderDetail(currentBookId);
+  showToast(note.synced ? 'Highlight saved and synced!' : 'Saved locally — sync failed', note.synced ? 'success' : 'error');
+}
+
+function renderDashboard() {
+  const grid = document.getElementById('books-grid');
+  grid.innerHTML = '';
+  state.books.forEach(function(book) {
+    const pct = book.totalPages > 0 ? Math.round((book.pagesRead / book.totalPages) * 100) : 0;
+    const card = document.createElement('div');
+    card.className = 'book-card';
+    card.onclick = function() { showDetail(book.id); };
+    card.innerHTML =
+      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);width:' + pct + '%;"></div>' +
+      '<div class="book-title">' + esc(book.title) + '</div>' +
+      '<div class="book-author">by ' + esc(book.author) + '</div>' +
+      '<div style="margin-bottom:10px">' +
+        '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="progress-label"><span>' + book.pagesRead + ' / ' + book.totalPages + ' pages</span><span><b>' + pct + '%</b></span></div>' +
+      '</div>' +
+      '<div class="notes-count"><span>' + book.notes.length + '</span> highlight' + (book.notes.length !== 1 ? 's' : '') + '</div>';
+    grid.appendChild(card);
+  });
+  const add = document.createElement('div');
+  add.className = 'add-book-card'; add.onclick = openAddBook;
+  add.innerHTML = '<div class="plus">+</div><div>Add a new book</div>';
+  grid.appendChild(add);
+  renderDocLink();
+}
+
+function showDetail(bookId) {
+  currentBookId = bookId;
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('book-detail').style.display = 'block';
+  renderDetail(bookId);
+}
+
+function renderDetail(bookId) {
+  const book = getBook(bookId);
+  const pct = book.totalPages > 0 ? Math.round((book.pagesRead / book.totalPages) * 100) : 0;
+  document.getElementById('detail-title').textContent = book.title;
+  document.getElementById('detail-author').textContent = 'by ' + book.author;
+  document.getElementById('detail-pct').textContent = pct + '%';
+  document.getElementById('detail-pages-info').textContent = book.pagesRead + ' of ' + book.totalPages + ' pages read';
+  document.getElementById('detail-bar').style.width = pct + '%';
+  document.getElementById('notes-badge').textContent = book.notes.length;
+  const list = document.getElementById('notes-list');
+  if (!book.notes.length) { list.innerHTML = '<div class="empty-notes">No highlights yet. Add your first one!</div>'; return; }
+  list.innerHTML = book.notes.map(function(n) {
+    return '<div class="note-item"><div class="note-cat">' + esc(n.category) + '</div>' +
+      '<div class="note-text">' + esc(n.text).replace(/\n/g,'<br>') + '</div>' +
+      '<div class="note-time">' + n.date + '</div>' +
+      '<div class="' + (n.synced ? 'note-synced' : 'note-err') + '">' + (n.synced ? '&#10003; Synced to Google Doc' : '&#9888; Not synced') + '</div></div>';
+  }).join('');
+}
+
+function showDashboard() {
+  document.getElementById('book-detail').style.display = 'none';
+  document.getElementById('dashboard').classList.remove('hidden');
+  renderDashboard();
+}
+
+function getBook(id) { return state.books.find(function(b) { return b.id === id; }); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+var toastT;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + (type||'success');
+  clearTimeout(toastT); toastT = setTimeout(function() { t.className = ''; }, 3500);
+}
+
+document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+  el.addEventListener('click', function(e) { if (e.target === el) el.classList.add('hidden'); });
+});
+</script>
+</body>
+</html>
