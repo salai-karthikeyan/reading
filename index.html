@@ -32,7 +32,6 @@ main { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
 #books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .book-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
 .book-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.book-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); transform-origin: left; }
 .book-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
 .book-author { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
 .progress-bar { background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
@@ -216,7 +215,7 @@ function loadState() { try { const r = localStorage.getItem(STORAGE_KEY); if (r)
 
 window.onload = function() {
   loadState();
-  const CLIENT_ID = '634977710404-ov6a6b2cjkv0h7gm39fjq7hs7g0f1mnj.apps.googleusercontent.com';
+  const CLIENT_ID = '620518113316-oe4u4l1fv7m1f554reirif4gj8kshc53.apps.googleusercontent.com';
   window._tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file openid email profile',
@@ -377,7 +376,7 @@ function renderDashboard() {
     card.className = 'book-card';
     card.onclick = function() { showDetail(book.id); };
     card.innerHTML =
-      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);width:' + pct + '%;"></div>' +
+      '<div style="position:absolute;top:0;left:0;height:3px;background:var(--accent);width:' + pct + '%;transition:width 0.4s;"></div>' +
       '<div class="book-title">' + esc(book.title) + '</div>' +
       '<div class="book-author">by ' + esc(book.author) + '</div>' +
       '<div style="margin-bottom:10px">' +
